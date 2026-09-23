@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1E1E1E"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cari: "
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:background="#FFFFFF"
+            android:textColor="#000000"
+            android:textColorHint="#777777"
+            android:hint="Ketik untuk mencari lagu..."
+            android:paddingHorizontal="6dp"
+            android:textSize="12sp"/>
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/listViewSongs"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#FFFFFF"
+        android:divider="#CCCCCC"
+        android:dividerHeight="1dp"
+        android:layout_marginBottom="6dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:id="@+id/txtCurrentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"/>
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="6dp"/>
+        <TextView
+            android:id="@+id/txtTotalTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="03:45"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+        <Button 
+            android:id="@+id/btnClear" 
+            android:layout_width="0dp" 
+            android:layout_height="38dp" 
+            android:layout_weight="1" 
+            android:text="Clear All" 
+            android:textSize="11sp"
+            android:layout_marginEnd="4dp"/>
+        <Button 
+            android:id="@+id/btnShuffle" 
+            android:layout_width="0dp" 
+            android:layout_height="38dp" 
+            android:layout_weight="1" 
+            android:text="Shuffle" 
+            android:textSize="11sp"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+        <Button android:id="@+id/btnPrev" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:text="Prev" android:textSize="11sp"/>
+        <Button android:id="@+id/btnPlay" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:text="Play" android:textSize="11sp"/>
+        <Button android:id="@+id/btnPause" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:text="Pause" android:textSize="11sp"/>
+        <Button android:id="@+id/btnStop" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:text="Stop" android:textSize="11sp"/>
+        <Button android:id="@+id/btnNext" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:text="Next" android:textSize="11sp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status: Siap."
+        android:textColor="#CCCCCC"
+        android:textSize="11sp"
+        android:background="#2C2C2C"
+        android:padding="4dp"/>
+
+</LinearLayout>

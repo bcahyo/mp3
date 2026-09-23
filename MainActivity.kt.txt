@@ -1,0 +1,301 @@
+package com.example.aplikasipertamaku
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.MediaPlayer
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import java.io.File
+import java.util.Locale
+
+data class SongItem(val title: String, val artist: String, val path: String)
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var listViewSongs: ListView
+    private lateinit var btnPlay: Button
+    private lateinit var btnPause: Button
+    private lateinit var btnStop: Button
+    private lateinit var btnNext: Button
+    private lateinit var btnPrev: Button
+    private lateinit var btnClear: Button
+    private lateinit var btnShuffle: Button
+    private lateinit var txtStatus: TextView
+    private lateinit var txtCurrentTime: TextView
+    private lateinit var txtTotalTime: TextView
+    private lateinit var seekBar: SeekBar
+    private lateinit var etSearch: EditText
+
+    private var mediaPlayer: MediaPlayer? = null
+    private val songList = mutableListOf<SongItem>()
+    private val displayedSongList = mutableListOf<SongItem>()
+    private var currentSongIndex = 0
+    private val STORAGE_PERMISSION_CODE = 101
+
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var updateSeekBarRunnable: Runnable
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        initViews()
+        checkStoragePermission()
+        setupListeners()
+    }
+
+    private fun initViews() {
+        listViewSongs = findViewById(R.id.listViewSongs)
+        btnPlay = findViewById(R.id.btnPlay)
+        btnPause = findViewById(R.id.btnPause)
+        btnStop = findViewById(R.id.btnStop)
+        btnNext = findViewById(R.id.btnNext)
+        btnPrev = findViewById(R.id.btnPrev)
+        btnClear = findViewById(R.id.btnClear)
+        btnShuffle = findViewById(R.id.btnShuffle)
+        txtStatus = findViewById(R.id.txtStatus)
+        txtCurrentTime = findViewById(R.id.txtCurrentTime)
+        txtTotalTime = findViewById(R.id.txtTotalTime)
+        seekBar = findViewById(R.id.seekBar)
+        etSearch = findViewById(R.id.etSearch)
+    }
+
+    private fun checkStoragePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE_PERMISSION_CODE)
+        } else {
+            loadMusicFromDevice()
+        }
+    }
+
+    private fun loadMusicFromDevice() {
+        songList.clear()
+        val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DATA
+        )
+        val selection = MediaStore.Audio.Media.IS_MUSIC + " != 0"
+
+        try {
+            val query = contentResolver.query(collection, projection, selection, null, null)
+            query?.use { cursor ->
+                val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+
+                while (cursor.moveToNext()) {
+                    val title = cursor.getString(titleCol) ?: "Unknown"
+                    val artist = cursor.getString(artistCol) ?: "Unknown Artist"
+                    val path = cursor.getString(dataCol) ?: ""
+                    if (File(path).exists()) {
+                        songList.add(SongItem(title, artist, path))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Gagal memindai media", Toast.LENGTH_SHORT).show()
+        }
+
+        displayedSongList.clear()
+        displayedSongList.addAll(songList)
+        updateListViewAdapter()
+        txtStatus.text = "Status: Ditemukan ${songList.size} lagu."
+    }
+
+    private fun updateListViewAdapter() {
+        val titles = displayedSongList.mapIndexed { index, song -> "${index + 1}. ${song.title} - ${song.artist}" }
+        
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, titles) {
+            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                val view = super.getView(position, convertView, parent)
+                val textView = view.findViewById<TextView>(android.R.id.text1)
+                textView.setTextColor(resources.getColor(android.R.color.black))
+                textView.textSize = 12f
+                return view
+            }
+        }
+        listViewSongs.adapter = adapter
+    }
+
+    private fun setupListeners() {
+        listViewSongs.setOnItemClickListener { _, _, position, _ ->
+            if (position < displayedSongList.size) {
+                currentSongIndex = position
+                playSong(displayedSongList[currentSongIndex])
+            }
+        }
+
+        btnPlay.setOnClickListener {
+            if (displayedSongList.isEmpty()) {
+                Toast.makeText(this, "Daftar lagu kosong!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (mediaPlayer != null && !mediaPlayer!!.isPlaying) {
+                mediaPlayer?.start()
+                txtStatus.text = "Status: Memutar musik..."
+            } else {
+                if (currentSongIndex >= displayedSongList.size) currentSongIndex = 0
+                playSong(displayedSongList[currentSongIndex])
+            }
+        }
+
+        btnPause.setOnClickListener {
+            mediaPlayer?.pause()
+            txtStatus.text = "Status: Musik dijeda."
+        }
+
+        btnStop.setOnClickListener {
+            try {
+                mediaPlayer?.stop()
+                mediaPlayer?.prepare()
+                mediaPlayer?.seekTo(0)
+                seekBar.progress = 0
+                txtStatus.text = "Status: Pemutaran dihentikan."
+            } catch (e: Exception) {
+                txtStatus.text = "Status: Berhenti."
+            }
+        }
+
+        btnNext.setOnClickListener {
+            if (displayedSongList.isNotEmpty()) {
+                currentSongIndex = (currentSongIndex + 1) % displayedSongList.size
+                playSong(displayedSongList[currentSongIndex])
+            }
+        }
+
+        btnPrev.setOnClickListener {
+            if (displayedSongList.isNotEmpty()) {
+                currentSongIndex = if (currentSongIndex - 1 < 0) displayedSongList.size - 1 else currentSongIndex - 1
+                playSong(displayedSongList[currentSongIndex])
+            }
+        }
+
+        btnClear.setOnClickListener {
+            mediaPlayer?.stop()
+            displayedSongList.clear()
+            updateListViewAdapter()
+            txtStatus.text = "Status: Daftar dibersihkan."
+        }
+
+        btnShuffle.setOnClickListener {
+            if (displayedSongList.isNotEmpty()) {
+                displayedSongList.shuffle()
+                updateListViewAdapter()
+                txtStatus.text = "Status: Daftar di-acak (Shuffle)."
+            }
+        }
+
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                val keyword = s.toString().toLowerCase(Locale.ROOT)
+                displayedSongList.clear()
+                if (keyword.isEmpty()) {
+                    displayedSongList.addAll(songList)
+                } else {
+                    for (song in songList) {
+                        if (song.title.toLowerCase(Locale.ROOT).contains(keyword) || 
+                            song.artist.toLowerCase(Locale.ROOT).contains(keyword)) {
+                            displayedSongList.add(song)
+                        }
+                    }
+                }
+                updateListViewAdapter()
+            }
+            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    try {
+                        mediaPlayer?.seekTo(progress)
+                    } catch (e: Exception) {
+                        // Abaikan jika pemutar belum siap
+                    }
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    private fun playSong(song: SongItem) {
+        try {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(song.path)
+                prepare()
+                start()
+            }
+            txtStatus.text = "Status: Memutar - ${song.title}"
+            
+            seekBar.max = mediaPlayer!!.duration
+            txtTotalTime.text = formatTime(mediaPlayer!!.duration)
+            trackSeekBar()
+
+            mediaPlayer?.setOnCompletionListener {
+                btnNext.performClick()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Gagal memutar file audio", Toast.LENGTH_SHORT).show()
+            txtStatus.text = "Status: Gagal memutar file."
+        }
+    }
+
+    private fun trackSeekBar() {
+        if (::updateSeekBarRunnable.isInitialized) {
+            handler.removeCallbacks(updateSeekBarRunnable)
+        }
+        updateSeekBarRunnable = object : Runnable {
+            override fun run() {
+                try {
+                    mediaPlayer?.let {
+                        if (it.isPlaying) {
+                            seekBar.progress = it.currentPosition
+                            txtCurrentTime.text = formatTime(it.currentPosition)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Mencegah crash thread background
+                }
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.post(updateSeekBarRunnable)
+    }
+
+    private fun formatTime(ms: Int): String {
+        val seconds = (ms / 1000) % 60
+        val minutes = (ms / (1000 * 60)) % 60
+        return String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                loadMusicFromDevice()
+            } else {
+                Toast.makeText(this, "Izin penyimpanan diperlukan", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::updateSeekBarRunnable.isInitialized) {
+            handler.removeCallbacks(updateSeekBarRunnable)
+        }
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
+}
